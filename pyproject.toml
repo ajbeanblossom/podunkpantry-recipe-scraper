@@ -1,0 +1,6 @@
+[project]
+name = "podunk-recipe-scraper"
+version = "0.1.0"
+description = "Podunk Pantry recipe scraper API"
+requires-python = ">=3.11"
+dependencies = []
