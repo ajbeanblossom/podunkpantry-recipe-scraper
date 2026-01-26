@@ -9,24 +9,16 @@ class handler(BaseHTTPRequestHandler):
         query = parse_qs(parsed_url.query)
         recipe_url = query.get("url", [""])[0]
 
-        # For now, return fake recipe data (we'll hook real scraping in later)
-        recipe = {
-            "source_url": recipe_url,
-            "title": "Test Podunk Pantry Recipe",
-            "description": "This is sample data from the Podunk Pantry scraper endpoint.",
-            "ingredients": [
-                "2 cups flour",
-                "1 cup sugar",
-                "2 eggs"
-            ],
-            "instructions": [
-                "Preheat oven to 350 F.",
-                "Mix all ingredients in a bowl.",
-                "Bake for 25 minutes."
-            ],
-            "servings": 4,
-            "total_time_minutes": 30
-        }
+       scraper = scrape_me(recipe_url)
+recipe = {
+    "source_url": recipe_url,
+    "title": scraper.title(),
+    "description": scraper.description() or "",
+    "ingredients": scraper.ingredients(),
+    "instructions": scraper.instructions_list(),
+    "servings": scraper.yields(),
+    "total_time_minutes": scraper.total_time(),
+}
 
         body = json.dumps(recipe)
 
