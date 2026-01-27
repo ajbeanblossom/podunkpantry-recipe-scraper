@@ -2,7 +2,10 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import json
 
-from recipe_scrapers import scrape_me
+try:
+    from recipe_scrapers import scrape_me
+except Exception:
+    scrape_me = None
 
 
 class handler(BaseHTTPRequestHandler):
@@ -19,44 +22,40 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(body.encode("utf-8"))
             return
 
-        try:
-            scraper = scrape_me(recipe_url)
+        # Default fallback recipe – will always work
+        recipe = {
+            "source_url": recipe_url,
+            "title": "Recipe from unsupported or test site",
+            "description": "Either this site is not auto-supported yet, or scraping failed. Please review and edit.",
+            "ingredients": [],
+            "instructions": [],
+            "servings": None,
+            "total_time_minutes": None,
+        }
 
-            recipe = {
-                "source_url": recipe_url,
-                "title": scraper.title(),
-                "description": scraper.description() or "",
-                "ingredients": scraper.ingredients(),
-                "instructions": scraper.instructions_list(),
-                "servings": scraper.yields(),
-                "total_time_minutes": scraper.total_time(),
-            }
+        # Try scraping only if recipe-scrapers is available
+        if scrape_me is not None:
+            try:
+                scraper = scrape_me(recipe_url)
 
-        except Exception as e:
-            error_text = str(e)
-
-            if "isn't currently supported by recipe-scrapers" in error_text:
-                # Fallback for unsupported sites (like podunkliving.com with WP Recipe Maker)
                 recipe = {
                     "source_url": recipe_url,
-                    "title": "Recipe from unsupported site",
-                    "description": "This site is not auto-supported yet. Please copy/paste or edit.",
-                    "ingredients": [],
-                    "instructions": [],
-                    "servings": None,
-                    "total_time_minutes": None,
-                }
-            else:
-                # Other errors: still send a structured error back
-                recipe = {
-                    "source_url": recipe_url,
-                    "title": "",
-                    "description": "",
-                    "ingredients": [],
-                    "instructions": [],
-                    "servings": None,
-                    "total_time_minutes": None,
-                    "error": error_text,
+                    "title": scraper.title(),
+                    "description": scraper.description() or "",
+                    "ingredients": scraper.ingredients(),
+                    "instructions": scraper.instructions_list(),
+                    "servings": scraper.yields(),
+                    "total_time_minutes": scraper.total_time(),
                 }
 
-        body = json.d
+            except Exception as e:
+                # Keep the fallback recipe, just attach the error for debugging
+                recipe["error"] = str(e)
+
+        body = json.dumps(recipe)
+
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(body.encode("utf-8"))
+        return
