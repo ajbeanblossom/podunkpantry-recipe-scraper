@@ -41,16 +41,22 @@ class handler(BaseHTTPRequestHandler):
                 except Exception:
                     continue
 
-                # data can be a dict or a list
-                candidates = []
-                if isinstance(data, dict):
-                    candidates = [data]
-                elif isinstance(data, list):
-                    candidates = data
+                def iter_candidates(obj):
+                    # If it's a plain dict, yield it and its @graph children
+                    if isinstance(obj, dict):
+                        yield obj
+                        graph = obj.get("@graph")
+                        if isinstance(graph, list):
+                            for node in graph:
+                                if isinstance(node, dict):
+                                    yield node
+                    # If it's a list, yield each dict item
+                    elif isinstance(obj, list):
+                        for item in obj:
+                            if isinstance(item, dict):
+                                yield item
 
-                for item in candidates:
-                    if not isinstance(item, dict):
-                        continue
+                for item in iter_candidates(data):
                     # Look for @type "Recipe" (could be list or string)
                     type_field = item.get("@type")
                     if isinstance(type_field, list):
@@ -137,14 +143,14 @@ class handler(BaseHTTPRequestHandler):
                 image_url = image_field.get("url") or image_field.get("@id")
 
             result = {
-                "source_url": recipe_url,
-                "title": title,
+                "source_url": recipe_url,      # 5. root URL
+                "title": title,                # 1. title
                 "description": description,
-                "ingredients": ingredients,
-                "instructions": instructions,
+                "ingredients": ingredients,    # 2. ingredients
+                "instructions": instructions,  # 3. instructions
                 "servings": servings,
                 "total_time_minutes": total_minutes,
-                "image_url": image_url,
+                "image_url": image_url,        # 4. image URL
             }
 
             self._send_json(200, result)
