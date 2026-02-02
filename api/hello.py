@@ -22,22 +22,13 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             # 2) Fetch the HTML of the page
-            headers = {
-                "User-Agent": (
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/123.0.0.0 Safari/537.36"
-                ),
-                "Accept-Language": "en-US,en;q=0.9",
-            }
-
-            resp = requests.get(recipe_url, timeout=10, headers=headers)
+            resp = requests.get(recipe_url, timeout=10)
             resp.raise_for_status()
             html = resp.text
 
             # 3) Find all <script type="application/ld+json"> blocks
             scripts = re.findall(
-                r'<script[^>]+type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script>',
+                r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
                 html,
                 flags=re.DOTALL | re.IGNORECASE,
             )
@@ -132,7 +123,7 @@ class handler(BaseHTTPRequestHandler):
             total_minutes = None
             if isinstance(total_time_iso, str) and total_time_iso.startswith("PT"):
                 # Very simple parser: look for number + "M"
-                match = re.search(r"(\\d+)\\s*M", total_time_iso)
+                match = re.search(r"(\d+)\s*M", total_time_iso)
                 if match:
                     total_minutes = int(match.group(1))
 
@@ -152,14 +143,14 @@ class handler(BaseHTTPRequestHandler):
                 image_url = image_field.get("url") or image_field.get("@id")
 
             result = {
-                "source_url": recipe_url,
-                "title": title,
+                "source_url": recipe_url,      # 5. root URL
+                "title": title,                # 1. title
                 "description": description,
-                "ingredients": ingredients,
-                "instructions": instructions,
+                "ingredients": ingredients,    # 2. ingredients
+                "instructions": instructions,  # 3. instructions
                 "servings": servings,
                 "total_time_minutes": total_minutes,
-                "image_url": image_url,
+                "image_url": image_url,        # 4. image URL
             }
 
             self._send_json(200, result)
